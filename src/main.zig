@@ -19,18 +19,12 @@ export var multiboot align(4) linksection(".multiboot") = Multiboot{
 };
 
 export var stack_bytes: [16 * 1024]u8 align(16) linksection(".bss") = undefined;
+const stack_bytes_slice = stack_bytes[0..];
 
-/// ELF entry point, called by multiboot bootloader. Just sets up the stack and calls kmain.
+/// ELF entry point, called by multiboot bootloader.
 export fn _start() callconv(.Naked) noreturn {
-    // Initialize the stack
-    const stack_top = @ptrToInt(&stack_bytes) + stack_bytes.len;
-    asm volatile (""
-        :
-        : [stack_top] "{esp}" (stack_top)
-    );
-
-    // Call kmain, make sure it never gets inlined.
-    @call(.{ .modifier = .never_inline }, kmain, .{});
+    // Call kmain with our stack, make sure it never gets inlined.
+    @call(.{ .modifier = .never_inline, .stack = stack_bytes_slice }, kmain, .{});
 
     // TODO: hlt loop
     while (true) {}
@@ -46,7 +40,7 @@ fn kmain() void {
 
     var writer = buffer.writer();
     _ = writer.write("test with writer\n") catch unreachable;
-    _ = writer.print("{}", .{1}) catch unreachable;
+    _ = writer.print("This is a number: {}. And another one: {}\n", .{ 42, 42 }) catch unreachable;
 }
 
 /// Panic handler
