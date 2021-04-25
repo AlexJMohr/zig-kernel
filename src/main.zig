@@ -19,18 +19,12 @@ export var multiboot align(4) linksection(".multiboot") = Multiboot{
 };
 
 export var stack_bytes: [16 * 1024]u8 align(16) linksection(".bss") = undefined;
+const stack_bytes_slice = stack_bytes[0..];
 
-/// ELF entry point, called by multiboot bootloader. Just sets up the stack and calls kmain.
+/// ELF entry point, called by multiboot bootloader.
 export fn _start() callconv(.Naked) noreturn {
-    // Initialize the stack
-    const stack_top = @ptrToInt(&stack_bytes) + stack_bytes.len;
-    asm volatile (""
-        :
-        : [stack_top] "{esp}" (stack_top)
-    );
-
-    // Call kmain, make sure it never gets inlined.
-    @call(.{ .modifier = .never_inline }, kmain, .{});
+    // Call kmain with our stack, make sure it never gets inlined.
+    @call(.{ .modifier = .never_inline, .stack = stack_bytes_slice }, kmain, .{});
 
     // TODO: hlt loop
     while (true) {}
@@ -38,17 +32,27 @@ export fn _start() callconv(.Naked) noreturn {
 
 /// Kernel entry point, called from _start
 fn kmain() void {
-    vga.clear();
-    vga.set_color(.LightGreen, .Black);
-    vga.write("Hello Zig Kernel! :^)\n");
-    vga.set_color(.LightGrey, .Black);
+    var buffer = &vga.buffer;
+    buffer.initialize();
+    buffer.set_color(.LightGreen, .Black);
+    buffer.write("Hello Zig Kernel! :^)\n");
+    buffer.set_color(.LightGrey, .Black);
+
+    var writer = buffer.writer();
+    _ = writer.write("test with writer\n") catch unreachable;
+    _ = writer.print("This is a number: {}. Wow!\n", .{42}) catch unreachable;
 }
 
 /// Panic handler
 pub fn panic(message: []const u8, stack_trace: ?*std.builtin.StackTrace) noreturn {
     @setCold(true);
-    vga.set_color(.LightRed, .Black);
-    vga.write("KERNEL PANIC: ");
+    var buffer = &vga.buffer;
+    buffer.set_color(.LightRed, .Black);
+    buffer.write("KERNEL PANIC: ");
+    buffer.write(message);
+    if (stack_trace) |trace| {
+        buffer.write("\n stack trace: TODO\n");
+    }
 
     // TODO: hlt loop
     while (true) {}

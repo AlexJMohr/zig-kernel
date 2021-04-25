@@ -15,11 +15,13 @@ pub fn build(b: *Builder) void {
 
     // Standard release options allow the person running `zig build` to select
     // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall.
-    const mode = b.standardReleaseOptions();
+    // const mode = b.standardReleaseOptions();
 
     const exe = b.addExecutable("kernel", "src/main.zig");
     exe.setTarget(target);
-    exe.setBuildMode(mode);
+    // FIXME: std.c.memcpy seems to segfault without building in release mode.
+    //        Try it again after implementing the IDT to catch exceptions.
+    exe.setBuildMode(.ReleaseSafe);
     exe.setLinkerScriptPath("linker.ld");
     exe.install();
 
