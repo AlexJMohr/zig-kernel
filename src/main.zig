@@ -40,7 +40,7 @@ fn kmain() void {
 
     var writer = buffer.writer();
     _ = writer.write("test with writer\n") catch unreachable;
-    _ = writer.print("This is a number: {}. And another one: {}\n", .{ 42, 42 }) catch unreachable;
+    _ = writer.print("This is a number: {}. Wow!\n", .{42}) catch unreachable;
 }
 
 /// Panic handler
@@ -51,7 +51,7 @@ pub fn panic(message: []const u8, stack_trace: ?*std.builtin.StackTrace) noretur
     buffer.write("KERNEL PANIC: ");
     buffer.write(message);
     if (stack_trace) |trace| {
-        buffer.write("\n stack trace:\n");
+        buffer.write("\n stack trace: TODO\n");
     }
 
     // TODO: hlt loop
