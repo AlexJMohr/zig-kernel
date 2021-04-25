@@ -38,17 +38,27 @@ export fn _start() callconv(.Naked) noreturn {
 
 /// Kernel entry point, called from _start
 fn kmain() void {
-    vga.clear();
-    vga.set_color(.LightGreen, .Black);
-    vga.write("Hello Zig Kernel! :^)\n");
-    vga.set_color(.LightGrey, .Black);
+    var buffer = &vga.buffer;
+    buffer.initialize();
+    buffer.set_color(.LightGreen, .Black);
+    buffer.write("Hello Zig Kernel! :^)\n");
+    buffer.set_color(.LightGrey, .Black);
+
+    var writer = buffer.writer();
+    _ = writer.write("test with writer\n") catch unreachable;
+    _ = writer.print("{}", .{1}) catch unreachable;
 }
 
 /// Panic handler
 pub fn panic(message: []const u8, stack_trace: ?*std.builtin.StackTrace) noreturn {
     @setCold(true);
-    vga.set_color(.LightRed, .Black);
-    vga.write("KERNEL PANIC: ");
+    var buffer = &vga.buffer;
+    buffer.set_color(.LightRed, .Black);
+    buffer.write("KERNEL PANIC: ");
+    buffer.write(message);
+    if (stack_trace) |trace| {
+        buffer.write("\n stack trace:\n");
+    }
 
     // TODO: hlt loop
     while (true) {}
